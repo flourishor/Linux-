@@ -1,0 +1,48 @@
+version: '3.8' # 定义Docker Compose文件版本
+
+services:
+  mysql:
+    image: mysql:9.2
+    container_name: my_qq_mysql # 指定容器的名称
+    restart: always # 当容器退出时自动重启
+    environment: # 设置环境变量
+      MYSQL_ROOT_PASSWORD: p@ssw0rd # 设置mysql的root用户密码
+      MYSQL_DATABASE: qq_db_1_3
+      MYSQL_USER: qq_user
+      MYSQL_PASSWORD: qq_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./init_db:/docker-entrypoint-initdb.d # 将本地init_db目录挂载到容器中的/docker-entrypoint-initdb.d目录，用于初始化数据库
+      - mysql_data:/var/lib/mysql # 将本地mysql_data目录挂载到容器中的/var/lib/mysql目录，用于持久化存储数据
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pp@ssw0rd"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  server:
+    build: . # 构建镜像
+    container_name: my_qq_server
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "10086:10086"   
+    working_dir: /app
+    command: ["./my_qq_1_3_server"]
+
+  # server:
+  #   build: . # 构建镜像
+  #   container_name: my_qq_server # 容器名称
+  #   depends_on: # 依赖服务
+  #     - mysql
+  #   ports: # 端口映射
+  #     - "12345:12345"   
+  #   volumes: # 挂载卷
+  #     - .:/app
+  #   working_dir: /app # 工作目录
+  #   command: ["./my_qq_1_3_server"]  # 启动命令
+
+volumes:
+  mysql_data:
